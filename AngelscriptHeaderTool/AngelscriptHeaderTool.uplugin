@@ -1,0 +1,25 @@
+{
+	"FileVersion": 1,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "AngelscriptHeaderTool",
+	"Description": "Angelscript UHT Generator for Unreal Engine ",
+	"Category": "Scripting",
+	"CreatedBy": "Hazelight Games",
+	"CreatedByURL": "http://angelscript.hazelight.se",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": true,
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": false,
+
+	"Modules": [
+		{
+			"Name": "AngelscriptHeader",
+			"Type": "Runtime",
+			"LoadingPhase": "PostDefault"
+		}
+	]
+}

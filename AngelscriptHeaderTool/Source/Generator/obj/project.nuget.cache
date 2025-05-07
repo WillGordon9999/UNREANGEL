@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "6xEcT3LFj7g=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Will\\Documents\\Unreal Projects\\AngelPortV2\\Plugins\\AngelscriptHeaderTool\\Source\\Generator\\AngelscriptUHT.ubtplugin.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Will\\.nuget\\packages\\microsoft.csharp\\4.7.0\\microsoft.csharp.4.7.0.nupkg.sha512",
+    "C:\\Users\\Will\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.36\\microsoft.windowsdesktop.app.ref.6.0.36.nupkg.sha512",
+    "C:\\Users\\Will\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.36\\microsoft.netcore.app.ref.6.0.36.nupkg.sha512",
+    "C:\\Users\\Will\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.36\\microsoft.aspnetcore.app.ref.6.0.36.nupkg.sha512"
+  ],
+  "logs": []
+}
