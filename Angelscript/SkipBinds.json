@@ -1,0 +1,46 @@
+{
+	"skips" :
+	[
+		{"className" : "StaticMesh", "functionName" : "GetMinLODForQualityLevels", "skipClass" : false},
+		{"className" : "StaticMesh", "functionName" : "SetMinLODForQualityLevels", "skipClass" : false},
+		
+		{"className" : "SkeletalMesh", "functionName" : "GetMinLODForQualityLevels", "skipClass" : false},
+		{"className" : "SkeletalMesh", "functionName" : "SetMinLODForQualityLevels", "skipClass" : false},
+		
+		{"className" : "SourceEffectEQPreset", "functionName" : "SetSettings","skipClass" : false},
+		
+		{"className" : "KismetSystemLibrary", "functionName" : "StackTrace", "skipClass" : false},
+		{"className" : "KismetArrayLibrary", "functionName" : "", "skipClass" : true},
+		{"className" : "BlueprintArrayLibrary", "functionName" : "", "skipClass" : true},
+		{"className" : "BlueprintSetLibrary", "functionName" : "", "skipClass" : true},
+		{"className" : "BlueprintMapLibrary", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "LocalizableMessageLibrary", "functionName" : "", "skipClass" : true},
+		{"className" : "StructUtilsFunctionLibrary", "functionName" : "", "skipClass" : true},
+		{"className" : "WidgetBlueprintLibrary", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "ClothingSimulationInteractorNv", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "DataLayerSubsystem", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "UserDefinedCaptureProtocol", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "UserDefinedImageCaptureProtocol", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "FunctionalAITest", "functionName" : "", "skipClass" : true},
+		
+		{"className" : "FunctionalAITestBase", "functionName" : "", "skipClass" : true}
+	],
+	
+	"moduleSkips":
+	[
+		"RigVMDeveloper",
+		"AnimationModifierLibrary",
+		"TakesCore",
+		"TakeRecorder",
+		"CacheTrackRecorder",
+		"InterchangeTests",
+		"SkeletalMeshModifiers",
+		"ControlRigDeveloper"
+	]
+}
