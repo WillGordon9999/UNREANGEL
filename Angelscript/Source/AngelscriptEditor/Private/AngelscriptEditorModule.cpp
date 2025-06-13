@@ -752,29 +752,29 @@ void FAngelscriptEditorModule::RegisterToolsMenuEntries()
 		Action
 	);
 
-	FToolUIActionChoice GenerateAction(FExecuteAction::CreateLambda([]() { GenerateNativeBinds(); }));
+	//FToolUIActionChoice GenerateAction(FExecuteAction::CreateLambda([]() { GenerateNativeBinds(); }));
 
-	FToolMenuSection& BindSection = Menu->FindOrAddSection("Programming Binds");
+	//FToolMenuSection& BindSection = Menu->FindOrAddSection("Programming Binds");
 
-	BindSection.AddMenuEntry
-	(
-		"ASGenerateBindings",
-		NSLOCTEXT("Angelscript", "GenerateBind.Label", "Generate Native Angelscript Binds"),
-		NSLOCTEXT("Angelscript", "GenerateBind.ToolTip", "Generate Native Function Bindings for existing UObjects"),
-		FSourceCodeNavigation::GetOpenSourceCodeIDEIcon(),
-		GenerateAction
-	);
+	//BindSection.AddMenuEntry
+	//(
+	//	"ASGenerateBindings",
+	//	NSLOCTEXT("Angelscript", "GenerateBind.Label", "Generate Native Angelscript Binds"),
+	//	NSLOCTEXT("Angelscript", "GenerateBind.ToolTip", "Generate Native Function Bindings for existing UObjects"),
+	//	FSourceCodeNavigation::GetOpenSourceCodeIDEIcon(),
+	//	GenerateAction
+	//);
 
-	FToolUIActionChoice TestAction(FExecuteAction::CreateLambda( []() { FunctionTests(); } ));
+	//FToolUIActionChoice TestAction(FExecuteAction::CreateLambda( []() { FunctionTests(); } ));
 
-	Section.AddMenuEntry
-	(
-		"Function Tests",
-		NSLOCTEXT("Angelscript", "OpenCode.Label", "Run Function Tests"),
-		NSLOCTEXT("Angelscript", "OpenCode.ToolTip", "Runs some Tests for debugging purposes"),
-		FSourceCodeNavigation::GetOpenSourceCodeIDEIcon(),
-		TestAction
-	);
+	//Section.AddMenuEntry
+	//(
+	//	"Function Tests",
+	//	NSLOCTEXT("Angelscript", "OpenCode.Label", "Run Function Tests"),
+	//	NSLOCTEXT("Angelscript", "OpenCode.ToolTip", "Runs some Tests for debugging purposes"),
+	//	FSourceCodeNavigation::GetOpenSourceCodeIDEIcon(),
+	//	TestAction
+	//);
 }
 
 void FunctionTests()
