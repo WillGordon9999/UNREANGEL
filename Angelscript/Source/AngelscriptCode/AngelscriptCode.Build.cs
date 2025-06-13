@@ -44,8 +44,6 @@ namespace UnrealBuildTool.Rules
 				"PhysicsCore",
 				"CoreOnline",
 				"EnhancedInput",
-				"GameplayAbilities",				
-				"GameplayTasks",
 				//"TargetingSystem",
 				//"ResonanceAudio",
 				//"TraceUtilities",
