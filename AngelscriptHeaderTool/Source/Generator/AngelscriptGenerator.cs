@@ -46,60 +46,6 @@ public struct ModuleData
 }
 
 [Serializable]
-public struct ProjectEntry
-{
-    public string Name { get; set; }
-    public string Type { get; set; }
-    public string LoadingPhase { get; set; }
-    public List<string> AdditionalDependencies { get; set; }
-
-    public ProjectEntry()
-    {
-        Name = string.Empty;
-        Type = string.Empty;
-        LoadingPhase = string.Empty;
-        AdditionalDependencies = new List<string>();
-    }
-}
-
-[Serializable]
-public struct PluginEntry
-{
-    public string Name { get; set; }
-    public bool Enabled { get; set; }
-    public List<string> TargetAllowList { get; set; }
-
-    public PluginEntry()
-    {
-        Name = string.Empty;
-        Enabled = true;
-        TargetAllowList = new List<string>();
-    }
-}
-
-[Serializable]
-public struct UProjectData
-{
-    public int FileVersion { get; set; }
-    public string EngineAssociation { get; set; } 
-    public string Category { get; set; }
-    public string Description { get; set; }
-    public List<ProjectEntry> Modules { get; set; }
-    public List<PluginEntry> Plugins { get; set; }
-
-    public UProjectData()
-    {
-        FileVersion = 3;
-        EngineAssociation = string.Empty;
-        Category = string.Empty;
-        Description = string.Empty;
-        Modules = new List<ProjectEntry>();
-        Plugins = new List<PluginEntry>();
-    }
-
-}
-
-[Serializable]
 public struct SkipData
 {        
     public string className { get; set; }        
@@ -118,17 +64,18 @@ public struct SkipData
 public class SkipList
 {
     //[JsonInclude] this can apparently be used to serialize fields
-    //public List<SkipData> skips { get; set; }        
+    public bool useDebugMode { get; set; }
     public HashSet<SkipData> skips { get; set; }
     public HashSet<string> moduleSkips { get; set; }
     public SkipList()
-    {
-        //skips = new List<SkipData>();
+    {        
         skips = new HashSet<SkipData>();
         moduleSkips = new HashSet<string>();
+        useDebugMode = false;
     }
 }
 
+//A small struct to allow us to have multiple modules map to the same plugin in plugin dictionary
 public struct ModuleToPlugin
 {
     public string name { get; set; }
@@ -145,36 +92,33 @@ class AngelscriptGenerator
     [UhtExporter
     (
         Name = "AngelscriptHeaderTool",
-        Description = "Angelscript UHT Testing",
+        Description = "Angelscript Bind Generator",
         Options = UhtExporterOptions.Default,
         ModuleName = "AngelscriptHeader"    
     )]
     public static void ScriptGeneratorExporter(IUhtExportFactory Factory)
     {
-        //if (!Factory.Session.IsPluginEnabled("ScriptPlugin", false))
+        //if (!Factory.Session.IsPluginEnabled("AngelscriptHeaderTool", false))
         //    return;
 
+        //CORE VARS
         export = Factory;
-
-        Factory.Session.LogInfo($"Typeof Factory {Factory.GetType().ToString()}");
-
+        bool debugMode = false;
         const string editor = "Editor";
-        const string angelscript = "Angelscript";
-        //const string asInclude = "#include \"./Source/AngelscriptCode/Public/AngelscriptBinds.h\"";
-        //const string asInclude = "#include \"AngelscriptBinds.h\"";
+        const string angelscript = "Angelscript";        
         const string coreMin = "#include \"CoreMinimal.h\"";
         const string skipDir = @"\Plugins\Angelscript\SkipBinds.json";
         const string sourceDir = @"\Plugins\Angelscript\Source\";
         string mainDir = $@"{Factory.Session.ProjectDirectory}\Plugins\Angelscript\";
-        
+        string targetDir = Factory.Session.ProjectDirectory + sourceDir;
         List<string> publicDeps = new List<string>() { "Core", "CoreUObject", "Engine", "AngelscriptCode" };
-
+        
         if (!Directory.Exists(Factory.Session.ProjectDirectory + @"\Script\"))
         {
             Factory.Session.LogInfo("Creating Script Folder");
             Directory.CreateDirectory(Factory.Session.ProjectDirectory + @"\Script\");
         }
-
+        
         if (!Directory.Exists(mainDir))
         {
             Factory.Session.LogInfo($"Angelscript Plugin not found in Project {mainDir}");
@@ -194,14 +138,10 @@ class AngelscriptGenerator
         //List<ModuleData> deleteModules = new List<ModuleData>();
 
         UhtPackage targetModule = null;
-        string targetDir = Factory.Session.ProjectDirectory + @"\Plugins\Angelscript\ASBinds";
-        //string targetDir = Factory.Session.ProjectDirectory + @"\Plugins\Angelscript\Intermediate\Build\Win64\UnrealEditor\Inc\AngelscriptCode\UHT";        
-        //string targetDir = Factory.PluginModule!.OutputDirectory;
-        //string targetDir = Factory.Session.ProjectDirectory + sourceDir;
-
         string fullSkipDir = Factory.Session.ProjectDirectory + skipDir;
         string json = File.ReadAllText(fullSkipDir, Encoding.UTF8);
 
+        //LOAD SKIP BINDS FILE
         JsonSerializerOptions jsonOptions = new JsonSerializerOptions();
         SkipList skipList = JsonSerializer.Deserialize<SkipList>(json, jsonOptions)!;
         if (skipList == null)
@@ -210,6 +150,7 @@ class AngelscriptGenerator
             return;
         }
 
+        debugMode = skipList.useDebugMode;
         SkipData classSkip = new SkipData("", "", true);
         SkipData funcSkip = new SkipData("", "", false);
 
@@ -240,9 +181,8 @@ class AngelscriptGenerator
             Factory.Session.LogInfo("Failed to Load Project File");
             return;
         }
-       
-        //Need to find a way to use targetName to find the right targetPlatform file
-        //in the Binaries folder under the right platformIndex
+
+        //Get Target Platform, Config, Architecture to find the correct target file to load
 
         UnrealTargetPlatform targetPlatform = BuildHostPlatform.Current.Platform;
         UnrealArchitectureConfig config = UnrealArchitectureConfig.ForPlatform(targetPlatform);
@@ -259,19 +199,12 @@ class AngelscriptGenerator
         DirectoryReference dataPath = UnrealBuildBase.Unreal.UserSettingDirectory;
 
         {           
-            //UnrealArchitectureConfig
-            //UnrealBuildTool.InstalledPlatformInfo;
-            //UnrealBuildTool.ProjectBuildConfiguration
-            //UnrealBuildTool.Plugins.IsPluginEnabledForTarget            
-            //TargetRules rules;
-            //Might need the Engine dir if the plugin is installed...I think
-
+            //HACK: After much searching, so far the only reliable way I can find all this information
+            //is by reading our own log file
             string newDir = dataPath.ToString();
             newDir += @"\UnrealBuildTool\Log.json";
             Factory.Session.LogInfo($"Log Path Test {newDir}");
-            Factory.Session.LogInfo($"Last Write {File.GetLastWriteTime(newDir).ToString()}");            
             string log = "";
-            //StringBuilder logBuild = new StringBuilder();            
             using (FileStream logFileStream = new FileStream(newDir, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (StreamReader logFileReader = new StreamReader(logFileStream))
             {
@@ -285,8 +218,7 @@ class AngelscriptGenerator
                 Factory.Session.LogInfo("Failed to find Building entry in log");
                 return;
             }
-            
-            //Factory.Session.LogInfo("In the checks");
+                        
             int appIndex = log.IndexOf("\"AppName\"", build);
             int targetIndex = log.IndexOf("\"TargetName\"", build);
             int platformIndex = log.IndexOf("\"Platform\"", build);
@@ -360,6 +292,7 @@ class AngelscriptGenerator
             Factory.Session.LogInfo($"Config Type {targetConfig}");          
         }
 
+        //============ START PLUGIN CHECKS ============
         List<PluginInfo> pluginList = Plugins.ReadAvailablePlugins(engineRef, projectRef, null);        
         Dictionary<string, ModuleToPlugin> pluginMap = new Dictionary<string, ModuleToPlugin>();
         HashSet<UHTManifest.Module> finalModules = new HashSet<UHTManifest.Module>();               
@@ -386,6 +319,8 @@ class AngelscriptGenerator
             allPlugins.Add(plug.Name, plug);
         }
 
+        //Unfortunately, this function is private, but seems to be the only reliable way I've found
+        //to properly check if plugins are enabled or not
         System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
 
         Type nativeProj = typeof(NativeProjects);
@@ -463,19 +398,20 @@ class AngelscriptGenerator
         HashSet<string> addedPlugins = new HashSet<string>();
         List<string> addedModuleNames = new List<string>();
 
-        //============ START PACKAGE LOOP ============
-        //foreach (UhtPackage package in Factory.Session.Packages)
+        //============ START PACKAGE LOOP ============        
         foreach(UhtPackage package in finalPackages)
         {
-            //Factory.Session.LogInfo($"Package Name: {package.Module.Name} {package.IsPartOfEngine} {package.IsPlugin}");
-            
             if (package.Module.Name.Contains(angelscript) || package.Module.BaseDirectory.Contains(editor))
-            {
-                //if (package.Module.Name.Equals("AngelscriptCode", StringComparison.OrdinalIgnoreCase))
+            {                
                 if (package.Module.Name.Equals("AngelscriptNativeBinds", StringComparison.OrdinalIgnoreCase))
                 {
                     targetModule = package;
                     targetDir = package.Module.OutputDirectory;
+                    if (debugMode)
+                    {
+                        targetDir = package.Module.BaseDirectory;
+                        Factory.Session.LogInfo($"Debug Base Dir: {targetDir}");
+                    }
                 }
 
                 rejectedModules++;
@@ -618,8 +554,7 @@ class AngelscriptGenerator
                             rejectedFuncs++;
                             continue;
                         }
-
-                        //if (function.FunctionFlags.HasAnyFlags(EFunctionFlags.Private | EFunctionFlags.Protected | EFunctionFlags.Static | EFunctionFlags.EditorOnly))
+                        
                         if (function.FunctionFlags.HasAnyFlags(EFunctionFlags.Private | EFunctionFlags.Protected | EFunctionFlags.EditorOnly))
                         {
                             rejectedFuncs++;
@@ -677,8 +612,7 @@ class AngelscriptGenerator
                                 break;
                             }
                         }
-
-                        //if (uhtClass.ClassFlags.HasAnyFlags(EClassFlags.MinimalAPI) && !function.FunctionFlags.HasAnyFlags(EFunctionFlags.RequiredAPI))
+                        
                         if (!classReqAPI && !function.FunctionFlags.HasAnyFlags(EFunctionFlags.RequiredAPI))
                         {
                             if (hasSemicolon)
@@ -873,8 +807,7 @@ class AngelscriptGenerator
                             }
                             else
                             {
-                                str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.SourceName}\"");
-                                //str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.EngineName}\"");
+                                str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.SourceName}\"");                                
                                 str.Append($", \"{function.SourceName}\", ");
                             }
 
@@ -891,8 +824,7 @@ class AngelscriptGenerator
 
                             else
                             {
-                                str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.SourceName}\"");
-                                //str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.EngineName}\"");
+                                str.Append($"\tFAngelscriptBinds::AddFunctionEntry(\"{uhtClass.SourceName}\"");                                
                                 str.Append($", \"{function.SourceName}\", ");
                             }
 
@@ -945,10 +877,6 @@ class AngelscriptGenerator
                             //    if (!data.dependencies.Contains(extra.Package) && extra.Package != data.package)
                             //        data.dependencies.Add(extra.Package);
                             //}
-
-                            //Should maybe add a loop here on include.IncludedHeaderFiles
-                            //to check for any headers it includes to add additional modules
-                            //although the only case of this problem seems to be LocalizableMessageBP
                         }
 
                         builder.Append(bind.ToString());
@@ -961,7 +889,10 @@ class AngelscriptGenerator
                 {
                     //This is a deliberate Organization trick
                     string fileName = "Bind_" + headerFile.FileNameWithoutExtension + ".gen.cpp"; //was .cpp
-                    //string fileName = "AS_Bind_" + headerFile.FileNameWithoutExtension + ".cpp";
+
+                    if (debugMode)
+                        fileName = "Bind_" + headerFile.FileNameWithoutExtension + ".cpp";
+                    
                     string file = builder.ToString();
 
                     if (file.Contains("AS_FORCE_LINK"))
@@ -974,7 +905,10 @@ class AngelscriptGenerator
                 else
                 {
                     string fileName = "Bind_" + headerFile.FileNameWithoutExtension + ".gen.cpp"; //was cpp
-                    //string fileName = "AS_Bind_" + headerFile.FileNameWithoutExtension + ".cpp";
+
+                    if (debugMode)
+                        fileName = "Bind_" + headerFile.FileNameWithoutExtension + ".cpp";
+
                     data.deleteFiles.Add(fileName);
                 }
 
@@ -1013,6 +947,7 @@ class AngelscriptGenerator
             //    }
             //}
         }
+        //============ END PACKAGE LOOP ============
 
         //BEGIN FINAL MODULE WRITING
         //Need to clean this up later, a lot of these probably aren't needed now
@@ -1062,10 +997,6 @@ class AngelscriptGenerator
                 privateDeps.Add(dep.Module.Name);
                 allModules.Add(dep.Module.Name);
             }
-           
-            //StringBuilder build = CreateModuleBuildFile(className, publicDeps, privateDeps);
-            //string buildName = $"{className}.Build.cs";
-            //string buildPath = targetDir + $@"\{className}\{buildName}";
 
             //WRITE BUILD FILE
             //Factory.Session.LogInfo(buildPath);
@@ -1080,13 +1011,17 @@ class AngelscriptGenerator
             StringBuilder moduleHeader = new StringBuilder();
             StringBuilder moduleCPP = new StringBuilder();
             CreateModuleFilesV2(className, moduleHeader, moduleCPP, finalModuleList, registerCalls);
-
-            //string headPath = $@"{targetDir}\{className}\Public\{className}Module.h";
-            //string cppPath = $@"{targetDir}\{className}\Private\{className}Module.cpp";
+            
             string headPath = $@"{targetDir}\{className}.h";
-            string cppPath = $@"{targetDir}\{className}.gen.cpp";            
-            finalIncludes.Add($"#include \"{className}.h\"\n");
-            //finalIncludes.Add($"#include \"../ASBinds/{className}.h\"\n");
+            string cppPath = $@"{targetDir}\{className}.gen.cpp";
+
+            if (debugMode)
+            {
+                headPath = $@"{targetDir}\Private\{className}.h";
+                cppPath = $@"{targetDir}\Private\{className}.cpp";
+            }
+
+            finalIncludes.Add($"#include \"{className}.h\"\n");            
 
             //MAIN MODULE PROCESSING LOOP
             foreach (var module in finalModuleList)
@@ -1094,21 +1029,25 @@ class AngelscriptGenerator
                 for (int i = 0; i < module.sourceFiles.Count; i++)
                 {
                     //WRITE BIND FILE
-                    //string path = $@"{targetDir}\{className}\Private\{module.fileNames[i]}";
                     string path = $@"{targetDir}\{module.fileNames[i]}";                    
+
+                    if (debugMode)
+                        path = $@"{targetDir}\Private\{module.fileNames[i]}";
+
                     Factory.CommitOutput(path, module.sourceFiles[i].Insert(0, $"#include \"{className}.h\"\n"));
 
                     if (module.package.Package.IsPlugin)
-                        plugins.Add(module.package.Package);
-                    //string path = Factory.PluginModule!.OutputDirectory + $@"\{module.fileNames[i]}";
-                    //Factory.CommitOutput(path, module.sourceFiles[i].Insert(0, $"#include \"{className}Module.h\"\n"));
+                        plugins.Add(module.package.Package);                    
                 }
 
                 for (int i = 0; i < module.deleteFiles.Count; i++)
                 {
-                    //DELETE OLD FILE
-                    //string path = $@"{targetDir}\{className}\Private\{module.deleteFiles[i]}";
+                    //DELETE OLD FILE                    
                     string path = $@"{targetDir}\{module.deleteFiles[i]}";
+
+                    if (debugMode)
+                        path = $@"{targetDir}\Private\{module.deleteFiles[i]}";
+
                     if (Directory.Exists(path)) File.Delete(path);
                 }
 
@@ -1134,22 +1073,17 @@ class AngelscriptGenerator
         //UPDATE NATIVE BINDS BUILD FILE
         string nativeBind = "AngelscriptNativeBinds";
         string bindFile = "AngelscriptNativeBinds.Build.cs";
-        string bindPath = Factory.Session.ProjectDirectory + sourceDir + $@"{nativeBind}\{bindFile}";
-        //string bindPath = targetDir + $@"\{nativeBind}\{bindFile}";
+        string bindPath = Factory.Session.ProjectDirectory + sourceDir + $@"{nativeBind}\{bindFile}";        
         
         StringBuilder native = CreateModuleBuildFile(nativeBind, publicDeps, allModules.ToList<string>());
         Factory.CommitOutput(bindPath, native);
 
-        StringBuilder finalHeader = new StringBuilder();
-        //StringBuilder final = new StringBuilder();
+        StringBuilder finalHeader = new StringBuilder();        
         finalHeader.Append("#pragma once\n");
         finalHeader.Append("#include \"AngelscriptBinds.h\"\n\n");
         //finalHeader.Append(asInclude + "\n\n");
         //finalHeader.Append(asInclude + "\n\n");
         //finalHeader.Append("void Bind_Angelscript();");
-
-        //StringBuilder final = new StringBuilder();
-        //final.Append("#include \"AngelscriptRegister.h\"\n");
 
         foreach (string inc in finalIncludes)
         {
@@ -1172,10 +1106,11 @@ class AngelscriptGenerator
         finalHeader.Append("}\n");
 
         string finalHeadPath = $@"{targetDir}\AngelscriptRegister.h";
-        //string finalPath = $@"{targetDir}\AngelscriptRegister.cpp";
 
-        Factory.CommitOutput(finalHeadPath, finalHeader);
-        //Factory.CommitOutput(finalPath, final);
+        if (debugMode)
+            finalHeadPath = $@"{targetDir}\Private\AngelscriptRegister.h";        
+
+        Factory.CommitOutput(finalHeadPath, finalHeader);        
 
         string pluginPath = Factory.Session.ProjectDirectory + @"\Plugins\Angelscript\Angelscript.uplugin";
         Factory.Session.LogInfo($"Plugin Path: {pluginPath}");

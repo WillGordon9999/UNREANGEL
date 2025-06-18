@@ -1,4 +1,6 @@
 {
+	"useDebugMode" : false,
+	
 	"skips" :
 	[
 		{"className" : "StaticMesh", "functionName" : "GetMinLODForQualityLevels", "skipClass" : false},
