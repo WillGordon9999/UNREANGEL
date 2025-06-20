@@ -1,6 +1,6 @@
 # Angelscript
 
-This repository contains code from the Angelscript library in the Engine/Plugins/Angelscript/ThirdParty directory.
+This repository contains code from the Angelscript library in the Angelscript/Source/AngelscriptCode/Public/source directory.
 This code is distributed under the zlib license:
 
 ---------
