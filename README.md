@@ -1,6 +1,6 @@
 # About
 
-UNREANGEL is a version of Hazelight's Angelscript Integration plugin for Unreal Engine that has been
+UNREANGEL is a lightweight version of Hazelight's Angelscript Integration plugin for Unreal Engine that has been
 modified to be compatible with vanilla versions of Unreal Engine, not dependent on engine source modifications.
 
 Please Note this plugin is early in development, several features are planned and more thorough testing
@@ -37,7 +37,7 @@ class ATestActor : AAngelscriptActor
     {
         FVector dir = FVector(1.0, 0.0, 0.0);
         FHitResult hit;
-        SetActorLocationAndRotation(GetActorLocation + dir * speed, GetActorRotation, true, hit, true);
+        SetActorLocationAndRotation(GetActorLocation() + dir * speed, GetActorRotation(), true, hit, true);
     }
 };
 ```
